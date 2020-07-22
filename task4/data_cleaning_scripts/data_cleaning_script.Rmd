@@ -1,0 +1,227 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(readxl)
+library(readr)
+library(dplyr)
+library(here)
+library(tidyverse)
+```
+
+# Read in xlsx file
+
+```{r}
+sheet1 <- read_xlsx(here("raw_data/boing-boing-candy-2015.xlsx"))
+sheet1
+```
+
+# Inspect the data i.e. dimensions, variable types, variable names, etc.?
+
+```{r}
+dim(sheet1)
+colnames(sheet1)
+glimpse(sheet1)
+```
+
+# Tidy data - long format
+
+```{r}
+sheet1_long <- sheet1 %>%
+  pivot_longer(cols = starts_with("["),  #converting rows to columns 
+               names_to = "candy",
+               values_to = "rating")
+
+#check dimensions, column names
+dim(sheet1_long)
+colnames(sheet1_long)
+```
+
+#Omitting columns that are not required
+
+```{r}
+sheet1_long <- sheet1_long %>%
+  select(-c(4:29))
+
+colnames(sheet1_long)
+dim(sheet1_long)
+```
+
+
+```{r}
+colnames(sheet1_long) <- c("timestamp", "age", "going_out", "candy", "rating")
+colnames(sheet1_long)
+
+```
+
+#Add column 'year'
+
+```{r}
+sheet1_long <- sheet1_long %>%
+  add_column(year = 2015)
+head(sheet1_long)
+```
+
+
+# Read in xlsx file
+
+```{r}
+sheet2 <- read_xlsx(here("raw_data/boing-boing-candy-2016.xlsx"))
+sheet2
+```
+
+# Inspect the data i.e. dimensions, variable types, variable names, etc.?
+
+```{r}
+dim(sheet2)
+colnames(sheet2)
+glimpse(sheet2)
+```
+
+# Tidy data - long format
+
+```{r}
+sheet2_long <- sheet2 %>%
+  pivot_longer(cols = starts_with("["),  #converting rows to columns 
+               names_to = "candy",
+               values_to = "rating")
+
+dim(sheet2_long)
+colnames(sheet2_long)
+```
+
+#Omitting columns that are not required
+
+```{r}
+sheet2_long <- sheet2_long %>%
+  select(-c(6:22))
+
+colnames(sheet2_long)
+dim(sheet2_long)
+```
+
+
+```{r}
+colnames(sheet2_long) <- c("timestamp", "going_out", "gender", "age", "country", "candy", "rating")
+colnames(sheet2_long)
+```
+
+#Add column 'year'
+
+```{r}
+sheet2_long <- sheet2_long %>%
+  add_column(year = 2016)
+head(sheet2_long)
+```
+
+
+
+# Read in xlsx file
+
+
+```{r}
+sheet3 <- read_xlsx(here("raw_data/boing-boing-candy-2017.xlsx"))
+sheet3
+```
+
+# Inspect the data i.e. dimensions, variable types, variable names, etc.?
+
+```{r}
+dim(sheet3)
+colnames(sheet3)
+glimpse(sheet3)
+```
+
+# Tidy data - long format
+
+```{r}
+sheet3_long <- sheet3 %>%
+  pivot_longer(cols = starts_with("Q6"),  #converting rows to columns 
+               names_to = "candy",
+               values_to = "rating")
+colnames(sheet3_long)
+```
+
+#Omitting columns that are not required
+
+```{r}
+sheet3_long <- sheet3_long %>%
+  select(-c(6:17))
+colnames(sheet3_long)
+dim(sheet3_long)
+```
+
+
+#Change col names
+
+```{r}
+colnames(sheet3_long) <- c("internal_id", "going_out", "gender", "age", "country", "candy", "rating")
+colnames(sheet3_long)
+
+sheet3_long
+#summarise((count = sum(is.na(rating))))
+```
+
+
+#Add column 'year'
+
+```{r}
+sheet3_long <- sheet3_long %>%
+  add_column(year = 2017)
+head(sheet3_long)
+```
+
+#X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X 
+
+# Combine all sheets 
+
+```{r}
+
+candy_combined <- bind_rows(sheet1_long, sheet2_long, sheet3_long)
+
+colnames(candy_combined)
+dim(candy_combined)
+head(candy_combined)
+```
+
+
+```{r}
+library(openxlsx)
+write.xlsx(here(candy_combined, file = 'raw_data/candy_combined.xlsx', colNames = TRUE))
+```
+
+
+#XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX               XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX               xXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXxx
+
+#Read in combined data file
+
+```{r}
+candy_clean <- read_csv(here("raw_data/candy_combined.csv"))
+head(candy_clean)
+```
+
+
+#Changing column data type
+
+```{r}
+candy_clean$age <- as.integer(candy_clean$age)
+candy_clean$year <- as.integer(candy_clean$year)
+candy_clean$gender <- as.character(candy_clean$gender)
+candy_clean$country <- as.character(candy_clean$country)
+candy_clean$internal_id <- as.integer(candy_clean$internal_id)
+head(candy_clean)
+
+```
+
+
+```{r}
+distinct(candy_clean, "country")
+```
+
+
+
+
+
+
