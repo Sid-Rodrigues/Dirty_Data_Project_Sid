@@ -1,0 +1,101 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+install.packages("here")
+```
+
+
+```{r}
+library(readr)
+library(dplyr)
+library(here)
+library(tidyverse)
+```
+
+
+```{r}
+here()
+```
+
+
+```{r}
+# read in clean data from clean_data folder
+decathlon <- read_csv(here("clean_data/decathlon_clean.csv"))
+decathlon
+```
+
+
+#1.1.2 Analysis questions
+
+#1. Who had the longest long jump seen in the data?
+
+```{r}
+longest_jump <- decathlon %>%
+  select(name, events, result) %>% 
+  filter(events == "long_jump") %>% 
+  arrange(desc(result)) %>%
+  head(1)   # display only the first row
+longest_jump
+```
+
+#2. What was the average 100m time in each competition?
+
+```{r}
+avg_100m <- decathlon %>%
+  select(competition, events, result)%>%
+  filter(events == "x100m") %>%
+  group_by(competition) %>%
+  summarise(avg_100 = mean(result))
+avg_100m
+```
+
+
+#3. Who had the highest total points across both competitions?
+
+```{r}
+highest_total_points <- decathlon %>%
+  distinct(name, points, competition) %>% # there are 10 rows for each name so using distinct() to ger one row for each name
+  group_by(name) %>%
+  summarise(total = sum(points)) %>%
+  arrange(desc(total)) %>% 
+  head(1)
+highest_total_points
+```
+
+
+#4. What was the shot-put scores for the top three competitors in each competition?
+
+```{r}
+top_three <- decathlon %>%
+  select(name, events, result, competition) %>%
+  filter(events == "shot_put") %>%
+  group_by(competition) %>%
+  arrange(desc(result)) %>%
+  slice(seq_len(3)) #get desired length of the sequence that is grouped by competition
+top_three
+```
+
+#5. What was the average points for competitors who ran the 400m in less than 50 seconds vs. those than ran 400m in more than 50 seconds?
+
+
+```{r}
+average_points <- decathlon %>%
+  select(name, events, result) %>%
+  filter(events == "x400m") %>%
+  mutate(threshold_above_50 = result > 50) %>% #create a new column which stores boolean result based on condition specified
+  group_by(threshold_above_50) %>% #using the new column to group by
+  summarise(average_400m = mean(result))
+
+average_points
+```
+
+
+
+
+
+
+
+
+
