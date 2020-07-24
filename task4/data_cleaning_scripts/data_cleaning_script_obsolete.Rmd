@@ -1,0 +1,400 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(readxl)
+library(readr)
+library(dplyr)
+library(here)
+library(tidyverse)
+library(stringr)
+```
+
+# Read in xlsx file
+
+```{r}
+sheet1 <- read_xlsx(here("raw_data/boing-boing-candy-2015.xlsx"))
+sheet1
+```
+
+# Inspect the data i.e. dimensions, variable types, variable names, etc.?
+
+```{r}
+dim(sheet1)
+colnames(sheet1)
+glimpse(sheet1)
+```
+
+# Tidy data - long format
+
+```{r}
+sheet1_long <- sheet1 %>%
+  pivot_longer(cols = starts_with("["),  #converting rows to columns 
+               names_to = "candy",
+               values_to = "rating")
+
+#check dimensions, column names
+dim(sheet1_long)
+colnames(sheet1_long)
+```
+
+#Omitting columns that are not required
+
+```{r}
+sheet1_long <- sheet1_long %>%
+  select(-c(4:29))
+
+colnames(sheet1_long)
+dim(sheet1_long)
+```
+
+
+```{r}
+colnames(sheet1_long) <- c("timestamp", "age", "going_out", "candy", "rating")
+colnames(sheet1_long)
+
+```
+
+#Add column 'year'
+
+```{r}
+sheet1_long <- sheet1_long %>%
+  add_column(year = 2015)
+head(sheet1_long)
+```
+
+
+# Read in xlsx file
+
+```{r}
+sheet2 <- read_xlsx(here("raw_data/boing-boing-candy-2016.xlsx"))
+sheet2
+```
+
+# Inspect the data i.e. dimensions, variable types, variable names, etc.?
+
+```{r}
+dim(sheet2)
+colnames(sheet2)
+glimpse(sheet2)
+```
+
+# Tidy data - long format
+
+```{r}
+sheet2_long <- sheet2 %>%
+  pivot_longer(cols = starts_with("["),  #converting rows to columns 
+               names_to = "candy",
+               values_to = "rating")
+
+dim(sheet2_long)
+colnames(sheet2_long)
+```
+
+#Omitting columns that are not required
+
+```{r}
+sheet2_long <- sheet2_long %>%
+  select(-c(6:22))
+
+colnames(sheet2_long)
+dim(sheet2_long)
+```
+
+
+```{r}
+colnames(sheet2_long) <- c("timestamp", "going_out", "gender", "age", "country", "candy", "rating")
+colnames(sheet2_long)
+```
+
+#Add column 'year'
+
+```{r}
+sheet2_long <- sheet2_long %>%
+  add_column(year = 2016)
+head(sheet2_long)
+distinct(sheet2_long, country)
+```
+
+
+
+# Read in xlsx file
+
+
+```{r}
+sheet3 <- read_xlsx(here("raw_data/boing-boing-candy-2017.xlsx"))
+sheet3
+```
+
+# Inspect the data i.e. dimensions, variable types, variable names, etc.?
+
+```{r}
+dim(sheet3)
+colnames(sheet3)
+glimpse(sheet3)
+```
+
+# Tidy data - long format
+
+```{r}
+sheet3_long <- sheet3 %>%
+  pivot_longer(cols = starts_with("Q6"),  #converting rows to columns 
+               names_to = "candy",
+               values_to = "rating")
+colnames(sheet3_long)
+```
+
+#Omitting columns that are not required
+
+```{r}
+sheet3_long <- sheet3_long %>%
+  select(-c(6:17))
+colnames(sheet3_long)
+dim(sheet3_long)
+```
+
+
+#Change col names
+
+```{r}
+colnames(sheet3_long) <- c("internal_id", "going_out", "gender", "age", "country", "candy", "rating")
+colnames(sheet3_long)
+
+sheet3_long
+#summarise((count = sum(is.na(rating))))
+```
+
+
+#Add column 'year'
+
+```{r}
+sheet3_long <- sheet3_long %>%
+  add_column(year = 2017)
+head(sheet3_long)
+distinct(sheet3_long, country)
+```
+
+#X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X 
+
+# Combine all sheets 
+
+```{r}
+
+candy_combined <- bind_rows(sheet1_long, sheet2_long, sheet3_long)
+
+colnames(candy_combined)
+dim(candy_combined)
+head(candy_combined)
+```
+
+#check
+
+```{r}
+distinct(candy_combined, going_out)
+```
+
+
+#Changing column data type
+
+```{r}
+candy_combined$age <- as.integer(candy_combined$age)
+candy_combined$year <- as.integer(candy_combined$year)
+candy_combined$internal_id <- as.integer(candy_combined$internal_id)
+head(candy_combined)
+
+```
+
+# remove age greater than 122
+
+```{r}
+candy_combined <- candy_combined %>%
+  filter(age <= 122)
+
+length(candy_combined$age)
+distinct(candy_combined, age)
+```
+
+# Change string values to lower case
+
+```{r}
+candy_combined <- candy_combined %>%
+  mutate_if(is.character, str_to_lower)
+
+head(candy_combined)
+unique(candy_combined$country)
+country_distinct <- distinct(candy_combined, country)
+
+```
+
+
+# Cleaning candy column
+
+```{r}
+candy_combined <- candy_combined %>%
+  mutate(candy = str_extract(candy, "[^\\[\\]]+"),
+         candy = str_extract(candy, "[^q6 |]+[^|]+"))
+
+```
+
+#cleaning country column
+
+```{r}
+canada_error <- c("can", "canada`")
+uk_error <- c("endland", "england", "scotland", "u.k.", "united kindom", "united kingdom")
+usa_error <- c("'merica", "america", "merica", "murica", "murrika", "n. america", "new jersey", "new york", "north carolina", "pittsburgh", 
+               "the united states", "the united states of america", "the yoo ess of aaayyyyyy", "trumpistan", "u s", "u s a", "u.s.", "u.s.a.",  
+               "unhinged states", "unied states", "unite states", "united  states of america", "united sates", "united staes", "united state", 
+               "united statea", "united stated", "united states", "united states of america",
+               "united statss", "united stetes", "united ststes", "unites states", "units states", "us", "us of a", "usa usa usa", "usa usa usa usa",
+               "usa usa usa!!!!", "usa!", "usa! usa!", "usa! usa! usa!", "usa!!!!!!", "usa? hard to tell anymore..", "usaa", "usas", "usausausa",   
+               "ussa")
+candy_combined <- candy_combined %>%
+  mutate(country = ifelse(country %in% canada_error, "canada", country),
+         country = ifelse(country %in% uk_error, "uk", country),
+         country = ifelse(country %in% usa_error, "usa", country))
+
+country_distinct <- distinct(candy_combined, country)
+
+```
+
+
+
+```{r}
+candy_combines <- candy_combined %>%
+  filter(candy != "cash, or other forms of legal tender")
+```
+
+
+
+#XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+1.4.2 Analysis questions
+1. What is the total number of candy ratings given across the three years. (number of candy ratings, not number of raters. Don’t count missing values)
+
+```{r}
+candy_combined %>%
+  filter(!is.na(rating)) %>%
+  summarise(total_rating_count = n())
+
+#total_candy_ratings
+```
+
+
+
+2. What was the average age of people who are going out trick or treating and the average age of people not going trick or treating?
+
+```{r}
+candy_combined %>%
+  select(going_out, age) %>%
+  filter(!is.na(going_out)) %>%
+  group_by(going_out) %>%
+  summarise(average_age = mean(age))
+
+
+
+```
+
+
+3. For each of joy, despair and meh, which candy bar revived the most of these ratings?
+
+```{r}
+candy_combined %>%
+  select(candy, rating) %>%
+  filter(!is.na(rating)) %>%
+  group_by(rating, candy) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count)) %>%
+  slice(seq_len(1))
+
+
+
+```
+
+```{r}
+distinct(candy_combined, candy)
+```
+
+
+4. How many people rated Starburst as despair?
+
+```{r}
+candy_combined %>%
+  select(candy, rating) %>%
+  filter(candy == "starburst", rating == "despair") %>%
+  group_by(rating) %>%
+  summarise(starburst_count = n()) #%>%
+  #arrange(desc(count)) #%>%
+  #slice(seq_len(3))
+```
+
+
+For the next three questions, count despair as -1, joy as +1 and meh as 0.
+
+5. What was the most popular candy bar by this rating system for each gender in the dataset?
+
+```{r}
+candy_combined %>%
+  select(gender, candy, rating) %>%
+  filter(!is.na(rating)) %>%
+  mutate(new_rating = case_when(rating == "despair" ~ -1,
+                                rating == "joy" ~ 1,
+                                rating == "meh" ~ 0,)) %>%
+  group_by(gender, candy) %>%
+  summarise(count_popular = sum(new_rating)) %>%
+  arrange(desc(count_popular)) %>%
+  slice(seq_len(1))
+
+```
+
+
+6. What was the most popular candy bar in each year?
+
+```{r}
+candy_combined %>%
+  select(year, candy, rating) %>%
+  filter(!is.na(rating)) %>%
+  mutate(new_rating = case_when(rating == "despair" ~ -1,
+                                rating == "joy" ~ 1,
+                                rating == "meh" ~ 0,)) %>%
+  group_by(year, candy) %>%
+  summarise(popular_candy = sum(new_rating)) %>%
+  arrange(desc(popular_candy)) %>%
+  slice(seq_len(1))
+```
+
+
+7. What was the most popular candy bar by this rating for people in US, Canada, UK and all other countries?
+
+
+```{r}
+
+```
+
+
+
+
+
+
+
+TEST
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+
+
+```{r}
+sheet3_long %>%
+  mutate(new_candy3= str_extract(candy, "[^Q6 |]+[^|]+"))
+new_candy3
+```
+
+
+```{r}
+sheet2_long %>%
+  mutate(new_candy2 = str_extract(candy, "[^\\[\\]]+"))
+new_candy2
+```
+
+
+
