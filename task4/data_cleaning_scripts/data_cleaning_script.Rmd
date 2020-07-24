@@ -9,6 +9,7 @@ library(readr)
 library(dplyr)
 library(here)
 library(tidyverse)
+library(stringr)
 ```
 
 # Read in xlsx file
@@ -114,6 +115,7 @@ colnames(sheet2_long)
 sheet2_long <- sheet2_long %>%
   add_column(year = 2016)
 head(sheet2_long)
+distinct(sheet2_long, country)
 ```
 
 
@@ -171,6 +173,7 @@ sheet3_long
 sheet3_long <- sheet3_long %>%
   add_column(year = 2017)
 head(sheet3_long)
+distinct(sheet3_long, country)
 ```
 
 #X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X 
@@ -186,42 +189,183 @@ dim(candy_combined)
 head(candy_combined)
 ```
 
+#check
 
 ```{r}
-library(openxlsx)
-write.xlsx(here(candy_combined, file = 'raw_data/candy_combined.xlsx', colNames = TRUE))
-```
-
-
-#XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX               XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX               xXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXxx
-
-#Read in combined data file
-
-```{r}
-candy_clean <- read_csv(here("raw_data/candy_combined.csv"))
-head(candy_clean)
+distinct(candy_combined, going_out)
 ```
 
 
 #Changing column data type
 
 ```{r}
-candy_clean$age <- as.integer(candy_clean$age)
-candy_clean$year <- as.integer(candy_clean$year)
-candy_clean$gender <- as.character(candy_clean$gender)
-candy_clean$country <- as.character(candy_clean$country)
-candy_clean$internal_id <- as.integer(candy_clean$internal_id)
-head(candy_clean)
+candy_combined$age <- as.integer(candy_combined$age)
+candy_combined$year <- as.integer(candy_combined$year)
+candy_combined$internal_id <- as.integer(candy_combined$internal_id)
+head(candy_combined)
 
+```
+
+# remove age greater than 122
+
+```{r}
+candy_combined <- candy_combined %>%
+  filter(age <= 122)
+
+length(candy_combined$age)
+distinct(candy_combined, age)
+```
+
+# Change string values to lower case
+
+```{r}
+candy_combined <- candy_combined %>%
+  mutate_if(is.character, str_to_lower)
+
+head(candy_combined)
+unique(candy_combined$country)
+country_distinct <- distinct(candy_combined, country)
+
+```
+
+
+# Cleaning candy column
+
+```{r}
+candy_combined <- candy_combined %>%
+  mutate(candy = str_extract(candy, "[^\\[\\]]+"),
+         candy = str_extract(candy, "[^q6 |]+[^|]+"))
+
+```
+
+
+
+#XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+1.4.2 Analysis questions
+1. What is the total number of candy ratings given across the three years. (number of candy ratings, not number of raters. Don’t count missing values)
+
+```{r}
+candy_combined %>%
+  filter(!is.na(rating)) %>%
+  summarise(total_rating_count = n())
+
+#total_candy_ratings
+```
+
+
+
+2. What was the average age of people who are going out trick or treating and the average age of people not going trick or treating?
+
+```{r}
+candy_combined %>%
+  select(going_out, age) %>%
+  filter(!is.na(going_out)) %>%
+  group_by(going_out) %>%
+  summarise(average_age = mean(age))
+
+
+
+```
+
+
+3. For each of joy, despair and meh, which candy bar revived the most of these ratings?
+
+```{r}
+candy_combined %>%
+  select(candy, rating) %>%
+  filter(!is.na(rating)) %>%
+  group_by(rating, candy) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count)) %>%
+  slice(seq_len(1))
+
+
+
+```
+
+```{r}
+distinct(candy_combined, candy)
+```
+
+
+4. How many people rated Starburst as despair?
+
+```{r}
+candy_combined %>%
+  select(candy, rating) %>%
+  filter(candy == "starburst", rating == "despair") %>%
+  group_by(rating) %>%
+  summarise(starburst_count = n()) #%>%
+  #arrange(desc(count)) #%>%
+  #slice(seq_len(3))
+```
+
+
+For the next three questions, count despair as -1, joy as +1 and meh as 0.
+
+5. What was the most popular candy bar by this rating system for each gender in the dataset?
+
+```{r}
+candy_combined %>%
+  select(gender, candy, rating) %>%
+  filter(!is.na(rating)) %>%
+  mutate(new_rating = case_when(rating == "despair" ~ -1,
+                                rating == "joy" ~ 1,
+                                rating == "meh" ~ 0,)) %>%
+  group_by(gender, candy) %>%
+  summarise(count_popular = sum(new_rating)) %>%
+  arrange(desc(count_popular)) %>%
+  slice(seq_len(1))
+
+```
+
+
+6. What was the most popular candy bar in each year?
+
+```{r}
+candy_combined %>%
+  select(year, candy, rating) %>%
+  filter(!is.na(rating)) %>%
+  mutate(new_rating = case_when(rating == "despair" ~ -1,
+                                rating == "joy" ~ 1,
+                                rating == "meh" ~ 0,)) %>%
+  group_by(year, candy) %>%
+  summarise(popular_candy = sum(new_rating)) %>%
+  arrange(desc(popular_candy)) %>%
+  slice(seq_len(1))
+```
+
+
+7. What was the most popular candy bar by this rating for people in US, Canada, UK and all other countries?
+
+
+```{r}
+
+```
+
+
+
+
+
+
+
+TEST
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+
+
+```{r}
+sheet3_long %>%
+  mutate(new_candy3= str_extract(candy, "[^Q6 |]+[^|]+"))
+new_candy3
 ```
 
 
 ```{r}
-distinct(candy_clean, "country")
+sheet2_long %>%
+  mutate(new_candy2 = str_extract(candy, "[^\\[\\]]+"))
+new_candy2
 ```
-
-
-
-
 
 
